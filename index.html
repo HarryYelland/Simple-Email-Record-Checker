@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://cloudflare-dns.com https://dns.google; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Email Record Checker: SPF, DKIM and DMARC</title>
+<meta name="description" content="Check whether your domain has SPF, DKIM and DMARC set up, and fix what is missing step by step. Runs in your browser.">
+<link rel="canonical" href="https://email-record-checker.harryyelland.workers.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Email Record Checker">
+<meta property="og:title" content="Email Record Checker: SPF, DKIM and DMARC">
+<meta property="og:description" content="See if anyone can send email pretending to be your domain, and how to fix it. Plain-English results and setup steps. Runs in your browser.">
+<meta property="og:url" content="https://email-record-checker.harryyelland.workers.dev/">
+<meta property="og:image" content="https://email-record-checker.harryyelland.workers.dev/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Email Record Checker: check SPF, DKIM and DMARC for any domain">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f5f7fa;--card:#fff;--text:#18202e;--muted:#566174;--line:#dde2ea;--accent:#1f5eff;--accent-text:#fff;
+  --code-bg:#eef1f6;--ok:#0f7a43;--ok-bg:#e1f5e9;--warn:#855400;--warn-bg:#fff1d0;--bad:#a5201a;--bad-bg:#fde6e3;--info:#2a4686;--info-bg:#e5ecfb;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f131b;--card:#171c27;--text:#e8ebf1;--muted:#9ba5b8;--line:#2a3243;--accent:#7aa2ff;--accent-text:#0b1020;
+  --code-bg:#0e121a;--ok:#62d79c;--ok-bg:#12301f;--warn:#f1c45e;--warn-bg:#35290d;--bad:#ff9189;--bad-bg:#3a1613;--info:#a1baf6;--info-bg:#18233f;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:1.8rem;line-height:1.2;margin:0 0 6px}
+h2{font-size:1.3rem;margin:0 0 6px}
+h3{font-size:1.08rem;margin:0}
+p{margin:.5em 0}
+.sub{color:var(--muted);margin:0 0 20px;font-size:1.02rem}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.tab{background:none;border:1px solid transparent;color:var(--muted);padding:9px 14px;border-radius:8px;cursor:pointer;font:inherit;font-size:.95rem;font-weight:600}
+.tab:hover{color:var(--text)}
+.tab[aria-selected=true]{background:var(--card);border-color:var(--line);color:var(--accent)}
+.panel[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:14px}
+.card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+label{display:block;font-weight:600;font-size:.95rem;margin:12px 0 4px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+textarea{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9rem;min-height:110px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 200px}
+.check{display:flex;align-items:center;gap:9px;font-weight:400;margin:7px 0;font-size:1rem}
+.check input{width:auto;transform:scale(1.15)}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 14px}
+button.btn{background:var(--accent);color:var(--accent-text);border:0;border-radius:8px;padding:11px 20px;font:inherit;font-weight:700;cursor:pointer}
+button.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);padding:7px 14px;font-size:.88rem}
+button.btn:disabled{opacity:.6;cursor:wait}
+.small{font-size:.9rem;color:var(--muted)}
+pre,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre.out{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0;white-space:pre-wrap;word-break:break-all;font-size:.86rem;flex:1;min-width:0}
+code{background:var(--code-bg);padding:1px 6px;border-radius:4px;font-size:.88em}
+.badge{font-size:.8rem;font-weight:700;padding:4px 11px;border-radius:99px;white-space:nowrap}
+.badge.pass{background:var(--ok-bg);color:var(--ok)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.fail,.badge.missing{background:var(--bad-bg);color:var(--bad)}
+.badge.none{background:var(--info-bg);color:var(--info)}
+ul.findings{list-style:none;padding:0;margin:12px 0 0}
+ul.findings li{display:flex;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:7px;font-size:.98rem}
+ul.findings li.ok{background:var(--ok-bg)}ul.findings li.warn{background:var(--warn-bg)}ul.findings li.bad{background:var(--bad-bg)}ul.findings li.info{background:var(--info-bg)}
+.ico{font-weight:800;width:1.1em;text-align:center;flex:none}
+li.ok .ico{color:var(--ok)}li.warn .ico{color:var(--warn)}li.bad .ico{color:var(--bad)}li.info .ico{color:var(--info)}
+.fixline{display:block;margin-top:3px;font-size:.93rem}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.92rem}
+th,td{text-align:left;vertical-align:top;padding:7px 8px;border-top:1px solid var(--line)}
+th{width:36%;font-weight:600}
+details{margin-top:12px}summary{cursor:pointer;color:var(--accent);font-weight:600}
+details>*:not(summary){margin-top:8px}
+.what{color:var(--muted);font-size:.95rem;margin:2px 0 0}
+[hidden]{display:none!important}
+.term{border:1px solid var(--line);border-radius:10px;margin:8px 0;padding:0 14px;background:var(--bg)}
+.term summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:11px 0;color:var(--text);font-weight:400;list-style:none;cursor:pointer}
+.term summary::-webkit-details-marker{display:none}
+.term summary::before{content:'+';color:var(--accent);font-weight:800;width:1em;flex:none}
+.term[open] summary::before{content:'\2013'}
+.term summary code,.term summary b{font-weight:700}
+.term .gl{color:var(--muted);font-size:.95rem;flex:1 1 220px}
+.term p{margin:0 0 12px}
+.term .ex{background:var(--code-bg);border-radius:8px;padding:8px 10px;font-size:.93rem}
+.pill{font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.pill.good{background:var(--ok-bg);color:var(--ok)}
+.pill.avoid{background:var(--bad-bg);color:var(--bad)}
+.pill.adv{background:var(--info-bg);color:var(--info)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{background:var(--bg);border:1px solid var(--line);color:var(--accent);border-radius:99px;padding:6px 14px;font:inherit;font-size:.88rem;font-weight:600;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.lgroup h2{margin-bottom:2px}
+ul.svc{margin:4px 0 0;padding-left:22px}
+ul.svc li{margin:3px 0}
+.tagu{background:var(--warn-bg);color:var(--warn);font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.nick{font-weight:400;color:var(--muted);font-size:.92rem}
+.banner{border-radius:12px;padding:20px;margin-bottom:14px}
+.banner h2{margin:0 0 4px;font-size:1.35rem}
+.banner.ok{background:var(--ok-bg);color:var(--ok)}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner.bad{background:var(--bad-bg);color:var(--bad)}
+.banner p{margin:0;color:var(--text)}
+ol.todo{margin:8px 0 0;padding-left:22px}
+ol.todo li{margin:6px 0}
+a.link,a.link:visited{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline}
+.step{display:flex;align-items:center;gap:10px;font-weight:700;margin:20px 0 6px;font-size:1.04rem}
+.step:first-of-type{margin-top:8px}
+.num{background:var(--accent);color:var(--accent-text);width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;flex:none}
+.opt{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0;cursor:pointer;font-weight:400}
+.opt:hover{border-color:var(--accent)}
+.opt input{margin-top:6px;width:auto;transform:scale(1.15)}
+.opt b{font-weight:700}
+.opt small{color:var(--muted);font-size:.9rem}
+.dns{border:1px solid var(--line);border-radius:10px;padding:6px 14px;margin:10px 0;background:var(--bg)}
+.dnsrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.dnsrow:first-child{border-top:0}
+.dnsrow .k{width:64px;flex:none;font-weight:700;font-size:.9rem}
+.dnsrow code{flex:1;word-break:break-all;background:var(--code-bg);padding:7px 10px;border-radius:6px}
+.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:11px 13px;font-size:.93rem;margin-top:10px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:6px}
+.gloss .card{margin:0;padding:16px}
+.gloss h3{margin-bottom:4px}
+.gloss p{font-size:.93rem;color:var(--muted);margin:0}
+.inline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.inline input{flex:1 1 180px}
+.spinner{color:var(--muted)}
+ol.howto{padding-left:22px;margin:6px 0}
+ol.howto li{margin:6px 0}
+footer{margin-top:30px;color:var(--muted);font-size:.88rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Can someone pretend to be your email address?</h1>
+  <p class="sub">Anyone can send an email that looks like it came from your domain. Three settings, called SPF, DKIM and DMARC, let email services check whether an email is real. Enter your domain to see if yours are set up, then follow the steps to fix anything that is missing.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="check">Check my domain</button>
+    <button class="tab" role="tab" data-tab="learn">Learn email security</button>
+    <button class="tab" role="tab" data-tab="spf">Set up SPF</button>
+    <button class="tab" role="tab" data-tab="dmarc">Set up DMARC</button>
+    <button class="tab" role="tab" data-tab="dkim">Set up DKIM</button>
+    <button class="tab" role="tab" data-tab="decode">Decode a record</button>
+  </div>
+
+  <!-- CHECK -->
+  <div class="panel" id="tab-check" hidden>
+    <div class="card">
+      <h2>Check my domain</h2>
+      <p class="small">Type the part of your email address after the @. For jane@example.com, enter <b>example.com</b>.</p>
+      <form id="checkForm" autocomplete="off">
+        <label for="chkDomain">Your domain</label>
+        <div class="inline" style="margin-top:0">
+          <input type="text" id="chkDomain" placeholder="example.com" spellcheck="false" inputmode="url" autocapitalize="none">
+          <button class="btn" id="chkBtn" type="submit">Check</button>
+        </div>
+        <input type="hidden" id="chkSel">
+        <p class="small" style="margin-top:14px">New to all this? <a class="link" data-goto="learn">Read the plain-English guide</a> first.</p>
+      </form>
+    </div>
+    <div id="chkOut"></div>
+  </div>
+
+  <!-- LEARN -->
+  <div class="panel" id="tab-learn" hidden>
+    <div class="card">
+      <h2>Learn email security</h2>
+      <p class="what">What the words and settings in this tool mean. Tap an item to open it.</p>
+      <label for="learnSearch">Search</label>
+      <input type="text" id="learnSearch" placeholder="For example: include, 2048, reject, MX, selector" spellcheck="false" autocomplete="off">
+      <div class="chips" id="learnChips"></div>
+    </div>
+
+    <div class="card" id="lg-big">
+      <h2>Start here</h2>
+      <p>Anyone can write any "From" address on an email. Nothing checks it by default. So someone can send an email that says it's from you@yourcompany.com when it isn't. This is called spoofing. Scammers use it to trick your customers and staff.</p>
+      <p>SPF, DKIM and DMARC are three settings you add to your domain. They let Gmail, Outlook and other email services check whether an email really came from you.</p>
+      <div class="gloss">
+        <div class="card"><h3>SPF</h3><p>A list of the services that can send email as your domain, such as Google Workspace or Mailchimp. Email from anywhere else looks suspicious.</p></div>
+        <div class="card"><h3>DKIM</h3><p>A digital signature added to each email you send. The receiving service checks it. It shows the email came from you and wasn't changed on the way.</p></div>
+        <div class="card"><h3>DMARC</h3><p>Says what to do with email that fails the SPF and DKIM checks: do nothing, put it in spam, or block it. It also sends you reports on who is sending email as you.</p></div>
+      </div>
+      <p style="margin-top:14px">You need all three. SPF can fail when an email is forwarded, but DKIM usually still works. DMARC makes sure the checks are for your domain and tells receivers what to do when they fail. Google and Yahoo require all three from anyone who sends a lot of email (about 5,000 a day or more).</p>
+    </div>
+
+    <div id="learnGroups"></div>
+    <div class="card" id="learnNone" hidden><p>Nothing matches that. Try a shorter word, like <b>spf</b>, <b>key</b> or <b>report</b>.</p></div>
+  </div>
+
+  <!-- SPF -->
+  <div class="panel" id="tab-spf" hidden>
+    <div class="card">
+      <h2>Set up SPF <span class="nick">who can send your email</span></h2>
+      <p class="what">SPF is a list of the services allowed to send email from your domain. Anything not on the list looks suspicious to receivers.</p>
+
+      <div class="step"><span class="num">1</span> Which services send email from your domain?</div>
+      <div class="checks" id="spfProvs"></div>
+      <p class="small">Not sure which you use? Enter your domain and we'll look at your current settings and tick them for you.</p>
+      <div class="inline">
+        <input type="text" id="spfDomain" placeholder="example.com" spellcheck="false" autocapitalize="none">
+        <button class="btn ghost" id="spfDetect" type="button">Look up my settings</button>
+      </div>
+      <div id="spfDetectMsg"></div>
+
+      <div class="step"><span class="num">2</span> What should happen to email from anyone else?</div>
+      <label class="opt"><input type="radio" name="spfAll" value="~all" checked><span><b>Mark it as suspicious</b> <small>(recommended)</small><br><small>Real email you forgot to list still arrives, but may go to spam. A safe choice while you get set up.</small></span></label>
+      <label class="opt"><input type="radio" name="spfAll" value="-all"><span><b>Reject it</b><br><small>Strictest. Choose this once you're sure every sender is listed, otherwise real email could bounce.</small></span></label>
+
+      <details><summary>More options (most people can skip this)</summary>
+        <label class="check"><input type="checkbox" id="spfMx"> Also allow the servers that receive my email (my MX records)</label>
+        <label class="check"><input type="checkbox" id="spfA"> Also allow my website's server (it sends contact-form emails, for example)</label>
+        <div class="row">
+          <div><label for="spfInc">Other services (their SPF address)</label><input type="text" id="spfInc" placeholder="spf.example-sender.com" spellcheck="false"></div>
+          <div><label for="spfIps">Your own server IP addresses</label><input type="text" id="spfIps" placeholder="203.0.113.10" spellcheck="false"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="spfNone"> This domain never sends any email (a parked or unused domain)</label>
+      </details>
+
+      <div class="step"><span class="num">3</span> Add this to your domain</div>
+      <div class="dns">
+        <div class="dnsrow"><span class="k">Type</span><code>TXT</code></div>
+        <div class="dnsrow"><span class="k">Name</span><code id="spfName">@</code><button class="btn ghost" data-copy="spfName">Copy</button></div>
+        <div class="dnsrow"><span class="k">Value</span><pre class="out" id="spfOut"></pre><button class="btn ghost" data-copy="spfOut">Copy</button></div>
+      </div>
+      <div id="spfNotes"></div>
+      <details open><summary>How do I add this?</summary><div class="howto" data-kind="spf"></div></details>
+    </div>
+  </div>
+
+  <!-- DMARC -->
+  <div class="panel" id="tab-dmarc" hidden>
+    <div class="card">
+      <h2>Set up DMARC <span class="nick">what to do with fakes</span></h2>
+      <p class="what">DMARC tells receiving mail services what to do with email that pretends to be you, and sends you reports so you can see who is sending as your domain.</p>
+
+      <div class="step"><span class="num">1</span> Where should reports be sent?</div>
+      <input type="text" id="dmRua" placeholder="you@example.com" spellcheck="false" autocapitalize="none" aria-label="Email address for reports">
+      <p class="small">Use an address you check. You'll receive a daily summary from big mail providers. Tip: a dedicated address like dmarc@yourdomain keeps them out of your inbox.</p>
+
+      <div class="step"><span class="num">2</span> What should happen to fake emails?</div>
+      <label class="opt"><input type="radio" name="dmP" value="none" checked><span><b>Just watch</b> <small>(recommended to start)</small><br><small>Nothing is blocked, so no risk to real email. You get reports showing who sends as you. Stay here for a few weeks.</small></span></label>
+      <label class="opt"><input type="radio" name="dmP" value="quarantine"><span><b>Send fakes to spam</b><br><small>Choose this once the reports show only services you recognise.</small></span></label>
+      <label class="opt"><input type="radio" name="dmP" value="reject"><span><b>Block fakes completely</b><br><small>The strongest protection. Choose this last, when you're confident.</small></span></label>
+
+      <details><summary>More options (most people can skip this)</summary>
+        <div class="row">
+          <div><label for="dmDomain">Your domain (just for the instructions)</label><input type="text" id="dmDomain" placeholder="example.com" spellcheck="false"></div>
+          <div><label for="dmPct">Apply to what share of fakes? (%)</label><input type="number" id="dmPct" min="1" max="100" value="100"></div>
+        </div>
+        <div class="row">
+          <div><label for="dmSp">Rule for subdomains (like mail.example.com)</label>
+            <select id="dmSp"><option value="">Same as above</option><option value="none">Just watch</option><option value="quarantine">Send to spam</option><option value="reject">Block</option></select></div>
+          <div><label for="dmRuf">Detailed failure reports to (rarely needed)</label><input type="text" id="dmRuf" placeholder="optional" spellcheck="false"></div>
+        </div>
+        <div class="row">
+          <div><label for="dmDkim">DKIM matching</label><select id="dmDkim"><option value="r">Relaxed (default)</option><option value="s">Strict</option></select></div>
+          <div><label for="dmSpf">SPF matching</label><select id="dmSpf"><option value="r">Relaxed (default)</option><option value="s">Strict</option></select></div>
+        </div>
+      </details>
+
+      <div class="step"><span class="num">3</span> Add this to your domain</div>
+      <div class="dns">
+        <div class="dnsrow"><span class="k">Type</span><code>TXT</code></div>
+        <div class="dnsrow"><span class="k">Name</span><code id="dmName">_dmarc</code><button class="btn ghost" data-copy="dmName">Copy</button></div>
+        <div class="dnsrow"><span class="k">Value</span><pre class="out" id="dmOut"></pre><button class="btn ghost" data-copy="dmOut">Copy</button></div>
+      </div>
+      <div id="dmNotes"></div>
+      <details open><summary>How do I add this?</summary><div class="howto" data-kind="dmarc"></div></details>
+    </div>
+    <div class="card">
+      <h3>Moving from watching to blocking</h3>
+      <ol class="howto">
+        <li><b>Start with "Just watch".</b> Nothing can break.</li>
+        <li><b>Read the reports for two to four weeks.</b> Look for legitimate services (newsletters, invoicing, helpdesk) that aren't passing, and ask them how to set up SPF or DKIM for your domain.</li>
+        <li><b>Switch to "Send fakes to spam".</b> Optionally start at 10% in More options and raise it over time.</li>
+        <li><b>Finish with "Block fakes completely".</b></li>
+      </ol>
+      <p class="small">The reports arrive as technical files. A free DMARC report reader service can turn them into a readable weekly summary.</p>
+    </div>
+  </div>
+
+  <!-- DKIM -->
+  <div class="panel" id="tab-dkim" hidden>
+    <div class="card">
+      <h2>Set up DKIM <span class="nick">the email signature</span></h2>
+      <p class="what">DKIM adds a digital signature to each email you send. Receivers use it to check the email is real and wasn't changed on the way.</p>
+      <p><b>You usually don't need to create anything yourself.</b> Your email provider makes the key. You switch it on and copy the record it gives you into your domain. Pick your provider:</p>
+      <details><summary>Google Workspace (Gmail for business)</summary>
+        <ol class="howto">
+          <li>Sign in to the Google Admin console (admin.google.com) as an administrator.</li>
+          <li>Go to <b>Apps &gt; Google Workspace &gt; Gmail &gt; Authenticate email</b>.</li>
+          <li>Choose your domain and click <b>Generate new record</b> (2048-bit is best).</li>
+          <li>Copy the <b>Name</b> and <b>Value</b> it shows into your domain's DNS as a TXT record (see "How do I add this?" below).</li>
+          <li>Return to the Admin console and click <b>Start authentication</b>. This can take up to 48 hours to show as active.</li>
+        </ol>
+      </details>
+      <details><summary>Microsoft 365 (Outlook for business)</summary>
+        <ol class="howto">
+          <li>Sign in to the Microsoft Defender portal (security.microsoft.com) as an administrator.</li>
+          <li>Go to <b>Email &amp; collaboration &gt; Policies &amp; rules &gt; Threat policies &gt; Email authentication settings</b>, then the <b>DKIM</b> tab.</li>
+          <li>Select your domain. Microsoft shows two CNAME records (names starting <code>selector1._domainkey</code> and <code>selector2._domainkey</code>).</li>
+          <li>Add both to your domain's DNS exactly as shown. They are CNAME records, not TXT.</li>
+          <li>Back in the portal, switch <b>Sign messages for this domain with DKIM signatures</b> to on.</li>
+        </ol>
+      </details>
+      <details><summary>Mailchimp, SendGrid, Mailgun, or another service</summary>
+        <p>Open that service's settings and look for <b>Domain authentication</b>, <b>Sender authentication</b> or <b>DKIM</b>. It will show you records to copy into your domain's DNS. Follow its on-screen steps, then use "Check my domain" to confirm.</p>
+      </details>
+      <details><summary>How do I add a record to my domain?</summary><div class="howto" data-kind="dkim"></div></details>
+    </div>
+
+    <div class="card">
+      <h3>I run my own mail server and need to create a key</h3>
+      <p class="small">Only for people who manage their own mail server. If you use any provider above, skip this.</p>
+      <details><summary>Show the key generator</summary>
+        <div class="row">
+          <div><label for="dkSel">Selector (a name for this key)</label><input type="text" id="dkSel" value="mail2026" spellcheck="false"></div>
+          <div><label for="dkDomain">Your domain</label><input type="text" id="dkDomain" placeholder="example.com" spellcheck="false"></div>
+          <div><label for="dkBits">Key strength</label><select id="dkBits"><option value="2048" selected>2048-bit (recommended)</option><option value="4096">4096-bit (some DNS hosts can't store it)</option><option value="1024">1024-bit (weak, only if required)</option></select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="dkTest"> Test mode (receivers go easy on failures while you check it works)</label>
+        <p><button class="btn" id="dkBtn">Create key pair</button></p>
+        <div id="dkOut"></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- DECODE -->
+  <div class="panel" id="tab-decode" hidden>
+    <div class="card">
+      <h2>Decode a record</h2>
+      <p class="what">Already have a record and want to know what it means? Paste it here and we'll explain what it means and point out any mistakes.</p>
+      <label for="decIn">Paste your SPF, DKIM or DMARC record</label>
+      <textarea id="decIn" spellcheck="false" placeholder="v=spf1 include:_spf.google.com ~all"></textarea>
+      <p>
+        <button class="btn ghost" data-example="v=spf1 mx include:_spf.google.com include:sendgrid.net ~all">Try an SPF example</button>
+        <button class="btn ghost" data-example="v=DMARC1; p=none; rua=mailto:dmarc@example.com">Try a DMARC example</button>
+        <button class="btn ghost" data-example="v=spf1 +all">Try a risky example</button>
+      </p>
+    </div>
+    <div id="decOut"></div>
+  </div>
+
+  <footer>Free and open source. No tracking, no cookies, no server. The only thing sent anywhere is your domain name, to a public DNS service, when you press Check. Changes to DNS can take up to an hour (sometimes longer) to show up.</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ICON = {ok:'✓', warn:'!', bad:'✕', info:'i'};
+
+/* ---------- tabs ---------- */
+function showTab(id) {
+  if (!$('#tab-' + id)) id = 'check';
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+  $$('.panel').forEach(p => p.hidden = p.id !== 'tab-' + id);
+}
+function goTab(id) {
+  showTab(id);
+  try { history.replaceState(null, '', location.pathname + location.search + '#' + id); } catch (e) {}
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+$$('.tab').forEach(b => b.addEventListener('click', () => goTab(b.dataset.tab)));
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-goto]');
+  if (g) { e.preventDefault(); goTab(g.dataset.goto); }
+});
+
+/* ---------- rendering helpers ---------- */
+function findingsHtml(f) {
+  if (!f.length) return '';
+  return '<ul class="findings">' + f.map(x =>
+    `<li class="${x.l}"><span class="ico">${ICON[x.l]}</span><span>${esc(x.t)}${x.fix ? `<span class="fixline"><b>What to do:</b> ${esc(x.fix)}</span>` : ''}</span></li>`).join('') + '</ul>';
+}
+function table(rows) {
+  return '<table><tbody>' + rows.map(r =>
+    `<tr><th scope="row"><code>${esc(r[0])}</code></th><td>${esc(r[1])}</td></tr>`).join('') + '</tbody></table>';
+}
+const BADGE = {pass:'Looks good', warn:'Could be better', fail:'Needs fixing', missing:'Not set up', none:"Couldn't confirm"};
+const badge = s => `<span class="badge ${s}">${BADGE[s]}</span>`;
+function statusOf(f, found = true) {
+  if (!found) return 'missing';
+  if (f.some(x => x.l === 'bad')) return 'fail';
+  if (f.some(x => x.l === 'warn')) return 'warn';
+  return 'pass';
+}
+function card(title, status, body, what, nick) {
+  return `<section class="card"><div class="card-h"><div><h3>${title}${nick ? ` <span class="nick">${esc(nick)}</span>` : ''}</h3>${what ? `<p class="what">${esc(what)}</p>` : ''}</div>${badge(status)}</div>${body}</section>`;
+}
+const techBox = (rec, rows) => `<details><summary>Technical details</summary><pre class="out" style="margin-top:8px">${esc(rec)}</pre>${rows ? table(rows) : ''}</details>`;
+
+/* ---------- how-to-add instructions ---------- */
+function howto(kind) {
+  const extra = {
+    spf: '<li><b>Already have a record that starts with <code>v=spf1</code>?</b> Edit that one instead of adding a second. Two SPF records breaks SPF.</li>',
+    dmarc: '<li><b>Already have a record named <code>_dmarc</code>?</b> Edit it instead of adding another.</li>',
+    dkim: ''
+  }[kind] || '';
+  return `<ol class="howto">
+    <li>Sign in to wherever you manage your domain's <b>DNS</b>. That's usually the company you bought the domain from (for example GoDaddy, Namecheap, 123 Reg, IONOS, Squarespace) or your website host, or Cloudflare if you use it.</li>
+    <li>Find <b>DNS settings</b>, sometimes called <i>DNS records</i> or <i>Manage DNS</i>.</li>
+    <li>Choose <b>Add record</b> and copy the <b>Type</b>, <b>Name</b> and <b>Value</b> from above.</li>
+    ${extra}
+    <li>Save. It can take from a few minutes up to an hour to take effect. Then come back and use <a class="link" data-goto="check">Check my domain</a> to confirm.</li>
+  </ol>
+  <p class="small">Name tip: <code>@</code> means your main domain. Some providers want you to leave the box blank or type your full domain instead. Some also add your domain to the end of the name automatically, so don't type it yourself unless it asks.</p>`;
+}
+$$('.howto[data-kind]').forEach(e => e.innerHTML = howto(e.dataset.kind));
+
+/* ---------- DNS over HTTPS ---------- */
+async function doh(name, type) {
+  const urls = [
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
+    `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`
+  ];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, {headers: {accept: 'application/dns-json'}});
+      if (r.ok) return await r.json();
+    } catch (e) { /* try next resolver */ }
+  }
+  throw new Error("We couldn't reach the DNS lookup service. Check your internet connection and try again.");
+}
+function joinTxt(d) {
+  const m = [...d.matchAll(/"((?:[^"\\]|\\.)*)"/g)];
+  return m.length ? m.map(x => x[1].replace(/\\(.)/g, '$1')).join('') : d;
+}
+async function txt(name) {
+  const j = await doh(name, 'TXT');
+  const ans = (j.Answer || []).filter(a => a.type === 16);
+  return {status: j.Status, records: ans.map(a => joinTxt(a.data))};
+}
+async function mxHosts(name) {
+  const j = await doh(name, 'MX');
+  return (j.Answer || []).filter(a => a.type === 15).map(a => a.data.replace(/^\d+\s+/, '').toLowerCase());
+}
+function cleanDomain(v) {
+  v = v.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/^.*@/, '').split(/[\/?#\s]/)[0].replace(/\.$/, '');
+  return /^(?=.{1,253}$)([a-z0-9_]([a-z0-9_-]{0,61}[a-z0-9_])?\.)+[a-z][a-z0-9-]{1,62}$/.test(v) ? v : null;
+}
+
+/* ---------- SPF ---------- */
+const isSpf = r => /^v=spf1(\s|$)/i.test(r.trim());
+function parseSpf(rec) {
+  return rec.trim().split(/\s+/).slice(1).map(raw => {
+    const mod = raw.match(/^([a-z][a-z0-9_.\-]*)=(.*)$/i);
+    if (mod) return {raw, type: 'modifier', name: mod[1].toLowerCase(), value: mod[2]};
+    const m = raw.match(/^([+\-~?])?([a-z0-9]+)(.*)$/i);
+    if (!m) return {raw, type: 'invalid'};
+    const rest = m[3] || '';
+    return {raw, type: 'mech', q: m[1] || '+', name: m[2].toLowerCase(), value: rest.startsWith(':') ? rest.slice(1) : rest};
+  });
+}
+const SPF_Q = {'+': 'allowed', '-': 'rejected', '~': 'marked suspicious', '?': 'treated neutrally'};
+
+/* Friendly names for well-known email services, matched on the include domain. */
+const SERVICES = [
+  [/(^|\.)(google|googlemail)\.com$/, 'Google Workspace (Gmail)'],
+  [/(^|\.)(outlook|office365|hotmail)\.com$/, 'Microsoft 365 (Outlook)'],
+  [/(^|\.)(mcsv\.net|mailchimp\.com|rsgsv\.net)$/, 'Mailchimp'],
+  [/(^|\.)mandrillapp\.com$/, 'Mailchimp Transactional (Mandrill)'],
+  [/(^|\.)sendgrid\.net$/, 'SendGrid'],
+  [/(^|\.)amazonses\.com$/, 'Amazon SES'],
+  [/(^|\.)mailgun\.(org|com)$/, 'Mailgun'],
+  [/(^|\.)(mtasv\.net|postmarkapp\.com)$/, 'Postmark'],
+  [/(^|\.)zoho\.(com|eu|in|com\.au)$/, 'Zoho Mail'],
+  [/(^|\.)(protonmail\.ch|proton\.ch)$/, 'Proton Mail'],
+  [/(^|\.)(icloud|me)\.com$/, 'iCloud Mail'],
+  [/(^|\.)hubspot(email)?\.(com|net)$/, 'HubSpot'],
+  [/(^|\.)pardot\.com$/, 'Salesforce Pardot'],
+  [/(^|\.)salesforce\.com$/, 'Salesforce'],
+  [/(^|\.)zendesk\.com$/, 'Zendesk'],
+  [/(^|\.)(freshdesk|freshworks)\.com$/, 'Freshdesk / Freshworks'],
+  [/(^|\.)shopify\.com$/, 'Shopify'],
+  [/(^|\.)squarespace\.com$/, 'Squarespace'],
+  [/(^|\.)secureserver\.net$/, 'GoDaddy'],
+  [/(^|\.)(perfora\.net|ionos\.(com|co\.uk|de)|1and1\.com|kundenserver\.de)$/, 'IONOS (1&1)'],
+  [/(^|\.)registrar-servers\.com$/, 'Namecheap'],
+  [/(^|\.)mimecast\.com$/, 'Mimecast'],
+  [/(^|\.)(pphosted\.com|proofpoint\.com)$/, 'Proofpoint'],
+  [/(^|\.)constantcontact\.com$/, 'Constant Contact'],
+  [/(^|\.)createsend\.com$/, 'Campaign Monitor'],
+  [/(^|\.)(sendinblue\.com|brevo\.com)$/, 'Brevo (Sendinblue)'],
+  [/(^|\.)klaviyo\.com$/, 'Klaviyo'],
+  [/(^|\.)(emsd1\.com|activecampaign\.com)$/, 'ActiveCampaign'],
+  [/(^|\.)intercom\.io$/, 'Intercom'],
+  [/(^|\.)atlassian\.net$/, 'Atlassian (Jira, Confluence)'],
+  [/(^|\.)mailjet\.com$/, 'Mailjet'],
+  [/(^|\.)sparkpostmail\.com$/, 'SparkPost'],
+  [/(^|\.)mailerlite\.com$/, 'MailerLite'],
+  [/(^|\.)xero\.com$/, 'Xero'],
+  [/(^|\.)intuit\.com$/, 'QuickBooks (Intuit)'],
+  [/(^|\.)(messagingengine\.com|fastmail\.com)$/, 'Fastmail'],
+  [/(^|\.)emailsrvr\.com$/, 'Rackspace Email'],
+  [/(^|\.)ovh\.(com|net)$/, 'OVH'],
+  [/(^|\.)cloudflare\.net$/, 'Cloudflare Email Routing']
+];
+function serviceName(domain) {
+  domain = String(domain || '').toLowerCase().replace(/\.$/, '');
+  for (const [re, name] of SERVICES) if (re.test(domain)) return name;
+  return null;
+}
+function rootOf(domain) {
+  const p = String(domain || '').toLowerCase().split('.').filter(Boolean);
+  if (p.length <= 2) return p.join('.');
+  const n = (p[p.length - 1].length === 2 && ['co', 'com', 'org', 'net', 'gov', 'ac', 'ltd'].includes(p[p.length - 2])) ? 3 : 2;
+  return p.slice(-n).join('.');
+}
+function explainSpf(t) {
+  if (t.type === 'invalid') return 'Not valid SPF syntax.';
+  if (t.type === 'modifier') {
+    if (t.name === 'redirect') {
+      const n = serviceName(t.value);
+      return `Uses the whole sender list published by ${n || rootOf(t.value)} instead of a list of its own.`;
+    }
+    if (t.name === 'exp') return `Explanation text for failures comes from ${t.value}.`;
+    return 'Unknown setting (receivers ignore it).';
+  }
+  const v = t.value;
+  const odd = t.q !== '+' && t.name !== 'all' ? ` Email matching this is ${SPF_Q[t.q]} rather than allowed.` : '';
+  switch (t.name) {
+    case 'all': return {'+': 'Anyone else: allowed to send as you. This is unsafe.', '-': 'Anyone else: their email is rejected.',
+      '~': 'Anyone else: their email is marked as suspicious.', '?': "Anyone else: no judgement is made, which gives no protection."}[t.q];
+    case 'include': {
+      const n = serviceName(v);
+      return (n ? `Allows ${n} to send email as your domain.`
+        : `Allows a service at ${rootOf(v)} to send email as your domain. We don't recognise this one, so check it's something you use.`) + odd;
+    }
+    case 'a': return "Allows your website's server (wherever your domain points) to send email." + odd;
+    case 'mx': return 'Allows the servers that receive your email (your MX records) to send it too.' + odd;
+    case 'ip4': case 'ip6': return (v.includes('/') ? `Allows any server in the address range ${v} to send email.` : `Allows the server at address ${v} to send email.`) + odd;
+    case 'ptr': return `Reverse-lookup match for ${v || 'this domain'} (outdated and slow).` + odd;
+    case 'exists': return `Matches if ${v} exists in DNS.` + odd;
+    default: return 'Unknown term.';
+  }
+}
+/* Who is allowed to send, in plain words */
+function spfServices(terms) {
+  const items = [];
+  terms.forEach(t => {
+    if (t.type === 'modifier' && t.name === 'redirect') {
+      const n = serviceName(t.value);
+      items.push({label: n || rootOf(t.value), unknown: !n, note: ' (borrows their entire list)'});
+      return;
+    }
+    if (t.type !== 'mech' || t.q !== '+') return;
+    if (t.name === 'include') {
+      const n = serviceName(t.value);
+      items.push({label: n || `A service at ${rootOf(t.value)}`, unknown: !n});
+    } else if (t.name === 'mx') items.push({label: 'The servers that receive your email (MX records)'});
+    else if (t.name === 'a') items.push({label: "Your website's server"});
+    else if (t.name === 'ip4' || t.name === 'ip6') items.push({label: `Server address ${t.value}`});
+  });
+  return items;
+}
+function servicesHtml(terms) {
+  const items = spfServices(terms);
+  const all = terms.find(t => t.type === 'mech' && t.name === 'all');
+  if (!items.length) {
+    return all && all.q === '-'
+      ? '<p class="what" style="margin-top:12px"><b>No services are allowed to send email as this domain.</b> That is right for a domain that never sends email.</p>' : '';
+  }
+  const unknown = items.some(i => i.unknown);
+  return `<p style="margin:14px 0 4px"><b>Services allowed to send email as your domain</b></p><ul class="svc">` +
+    items.map(i => `<li>${esc(i.label)}${i.note ? `<span class="small">${esc(i.note)}</span>` : ''}${i.unknown ? ' <span class="tagu">not recognised</span>' : ''}</li>`).join('') + '</ul>' +
+    (unknown ? '<p class="small">Only keep services you actually use. Old, forgotten ones are a way in for scammers, so remove any you no longer need.</p>' : '');
+}
+function analyseSpf(rec) {
+  const f = [], terms = parseSpf(rec);
+  let direct = 0, allIdx = -1, allCount = 0, redirect = false;
+  if (!isSpf(rec)) f.push({l: 'bad', t: 'This does not start with v=spf1, so it is not a valid SPF record.', fix: 'Start the record with v=spf1.'});
+  terms.forEach((t, i) => {
+    if (t.type === 'invalid') { f.push({l: 'bad', t: `"${t.raw}" is not something SPF understands.`, fix: 'Remove or correct it.'}); return; }
+    if (t.type === 'modifier') {
+      if (t.name === 'redirect') { redirect = true; direct++; }
+      else if (t.name !== 'exp') f.push({l: 'warn', t: `"${t.name}=" is not a recognised SPF setting and will be ignored.`});
+      return;
+    }
+    const n = t.name;
+    if (!['all', 'include', 'a', 'mx', 'ip4', 'ip6', 'ptr', 'exists'].includes(n)) { f.push({l: 'bad', t: `"${n}" is not a valid SPF term, which makes the whole record fail.`, fix: `Remove "${t.raw}" or correct the spelling.`}); return; }
+    if (['include', 'a', 'mx', 'ptr', 'exists'].includes(n)) direct++;
+    if (n === 'all') { allCount++; if (allIdx < 0) allIdx = i; }
+    if (n === 'ptr') f.push({l: 'warn', t: 'Your record uses an outdated feature (ptr) that is slow and discouraged.', fix: 'Replace it with the actual services or IP addresses you send from.'});
+    if (n === 'include' && !t.value) f.push({l: 'bad', t: 'An "include" is missing the service it should refer to.', fix: 'Add the service, like include:_spf.google.com.'});
+    if (n === 'ip4' && !/^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(t.value)) f.push({l: 'bad', t: `"${t.value}" is not a valid IPv4 address.`, fix: 'Correct the address.'});
+    if (n === 'ip6' && !/^[0-9a-f:.]+(\/\d{1,3})?$/i.test(t.value)) f.push({l: 'bad', t: `"${t.value}" is not a valid IPv6 address.`, fix: 'Correct the address.'});
+  });
+  if (allCount > 1) f.push({l: 'warn', t: 'The record ends more than once. Only the first ending is used.'});
+  if (allIdx >= 0 && allIdx < terms.length - 1 && !terms.slice(allIdx + 1).every(t => t.type === 'modifier'))
+    f.push({l: 'warn', t: 'Anything written after the ending of the record is ignored.', fix: 'Move the ending (the ~all or -all part) to the very end.'});
+  if (allIdx < 0 && !redirect) f.push({l: 'warn', t: "Your record doesn't say what to do with senders that aren't on the list, so spoofing isn't discouraged.", fix: 'Add ~all to the end of the record.'});
+  if (allIdx >= 0) {
+    const q = terms[allIdx].q;
+    if (q === '+') f.push({l: 'bad', t: 'Your record says anyone in the world may send email as your domain. That defeats the whole point of SPF.', fix: 'Change the +all at the end to ~all (or -all for the strictest setting).'});
+    else if (q === '?') f.push({l: 'warn', t: "The ending of your record (?all) tells receivers not to judge unknown senders at all, so it gives no protection.", fix: 'Change ?all to ~all.'});
+    else if (q === '~') f.push({l: 'ok', t: 'Email from senders that are not on your list is marked as suspicious. That is a sensible setting.'});
+    else f.push({l: 'ok', t: 'Email from senders that are not on your list is rejected. That is the strictest setting.'});
+  }
+  if (direct > 10) f.push({l: 'bad', t: `Your record asks receivers to look up ${direct} things, and the limit is 10. Above that, SPF breaks and fails every check.`, fix: 'Remove services you no longer use.'});
+  else if (direct > 8) f.push({l: 'warn', t: `Your record is close to the lookup limit (${direct} of 10 used directly).`, fix: 'Remove services you no longer use before adding more.'});
+  return {terms, findings: f, direct};
+}
+async function countSpf(domain, st, path = []) {
+  if (path.length > 10 || st.fetches++ > 30) { st.truncated = true; return; }
+  if (path.includes(domain)) { st.issues.push({l: 'bad', t: `One of your services (${domain}) refers back to itself in a loop.`}); return; }
+  let r;
+  try { r = await txt(domain); } catch (e) { st.issues.push({l: 'warn', t: `We couldn't look up ${domain}.`}); return; }
+  const recs = r.records.filter(isSpf);
+  if (!recs.length) { st.issues.push({l: 'warn', t: `Your SPF record includes ${domain}, which has no SPF record of its own. It may be an old service.`, fix: `Remove include:${domain} if you no longer use it.`}); return; }
+  for (const t of parseSpf(recs[0])) {
+    const inc = t.type === 'mech' && t.name === 'include';
+    const red = t.type === 'modifier' && t.name === 'redirect';
+    if (inc || red) { st.count++; if (t.value) await countSpf(t.value.toLowerCase(), st, path.concat(domain)); }
+    else if (t.type === 'mech' && ['a', 'mx', 'ptr', 'exists'].includes(t.name)) st.count++;
+  }
+}
+
+/* ---------- DMARC ---------- */
+const isDmarc = r => /^\s*v=DMARC1/i.test(r);
+function parseTags(rec, strip) {
+  const out = [];
+  rec.split(';').forEach(p => {
+    const i = p.indexOf('=');
+    if (i < 0) return;
+    let v = p.slice(i + 1);
+    v = strip ? v.replace(/\s+/g, '') : v.trim();
+    out.push({k: p.slice(0, i).trim().toLowerCase(), v});
+  });
+  return out;
+}
+const DMARC_DESC = {
+  v: 'Marks this as a DMARC record.',
+  p: 'What receivers should do with fake email: none (just watch), quarantine (spam) or reject (block).',
+  sp: 'The same choice, for subdomains. Uses the main choice if absent.',
+  pct: 'What percentage of fake email the rule is applied to.',
+  rua: 'Where daily summary reports are sent.',
+  ruf: 'Where detailed per-email failure reports are sent.',
+  adkim: 'How closely the DKIM signing domain must match your domain: r (relaxed) or s (strict).',
+  aspf: 'How closely the SPF domain must match your domain: r (relaxed) or s (strict).',
+  fo: 'When to send failure reports.',
+  ri: 'Requested time between summary reports.',
+  rf: 'Format of failure reports.'
+};
+function analyseDmarc(rec) {
+  const tags = parseTags(rec, false), f = [];
+  const get = k => (tags.find(t => t.k === k) || {}).v;
+  if (!tags.length || tags[0].k !== 'v' || tags[0].v !== 'DMARC1') f.push({l: 'bad', t: 'The record must begin with v=DMARC1 exactly.', fix: 'Make v=DMARC1 the first item.'});
+  const p = get('p'), sp = get('sp'), pct = get('pct'), rua = get('rua');
+  if (!p) f.push({l: 'bad', t: 'The record has no policy (p=), so DMARC does nothing.', fix: 'Add p=none to start, or p=quarantine / p=reject.'});
+  else if (!['none', 'quarantine', 'reject'].includes(p)) f.push({l: 'bad', t: `"${p}" is not a valid policy.`, fix: 'Use none, quarantine or reject.'});
+  else if (p === 'none') f.push({l: 'warn', t: "DMARC is in watch-only mode. It reports fake emails but doesn't stop them.", fix: 'Read your reports, then move to p=quarantine and finally p=reject when only services you recognise are sending.'});
+  else if (p === 'quarantine') f.push({l: 'ok', t: 'Fake emails are sent to spam. When you are confident, p=reject blocks them outright.'});
+  else f.push({l: 'ok', t: 'Fake emails are blocked completely. That is the strongest setting.'});
+  if (sp && !['none', 'quarantine', 'reject'].includes(sp)) f.push({l: 'bad', t: `"${sp}" is not a valid subdomain policy.`, fix: 'Use none, quarantine or reject.'});
+  else if (sp === 'none' && p && p !== 'none') f.push({l: 'warn', t: 'Your main domain is protected, but subdomains (like mail.yourdomain) are set to watch-only, so scammers can use those.', fix: 'Remove sp=none, or set it to match your main policy.'});
+  if (pct !== undefined) {
+    const n = Number(pct);
+    if (!/^\d+$/.test(pct) || n < 0 || n > 100) f.push({l: 'bad', t: `pct=${pct} is not a valid percentage.`, fix: 'Use a whole number from 1 to 100.'});
+    else if (n < 100 && p && p !== 'none') f.push({l: 'warn', t: `Your rule is only applied to ${n}% of fake emails.`, fix: 'Raise pct to 100 once reports look clean.'});
+  }
+  if (!rua) f.push({l: 'warn', t: "There's no address for reports, so you can't see who is sending email as your domain.", fix: 'Add rua=mailto:you@yourdomain.com.'});
+  else rua.split(',').forEach(u => {
+    if (!/^mailto:[^@\s]+@[^@\s]+$/i.test(u.trim().split('!')[0])) f.push({l: 'bad', t: `The report address "${u.trim()}" isn't written correctly.`, fix: 'Write it like rua=mailto:you@yourdomain.com.'});
+  });
+  ['adkim', 'aspf'].forEach(k => {
+    const v = get(k);
+    if (v !== undefined && !['r', 's'].includes(v)) f.push({l: 'bad', t: `${k} should be r or s.`, fix: 'Use r (relaxed) or s (strict).'});
+  });
+  tags.forEach(t => { if (!Object.keys(DMARC_DESC).includes(t.k)) f.push({l: 'info', t: `"${t.k}" is not a standard setting and will be ignored.`}); });
+  return {tags, findings: f};
+}
+
+/* ---------- DKIM ---------- */
+const isDkim = r => /(^|;)\s*(v=DKIM1|p=)/i.test(r);
+function b64ToU8(s) { const b = atob(s); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+function derRead(buf, pos) {
+  const tag = buf[pos]; let len = buf[pos + 1], off = pos + 2;
+  if (len & 0x80) { const n = len & 0x7f; len = 0; for (let i = 0; i < n; i++) len = (len * 256) + buf[off + i]; off += n; }
+  return {tag, start: off, end: off + len};
+}
+function rsaBits(buf) {
+  try {
+    const seq = derRead(buf, 0);
+    if (seq.tag !== 0x30) return null;
+    let first = derRead(buf, seq.start), nInt;
+    if (first.tag === 0x02) nInt = first;                     // PKCS#1 RSAPublicKey
+    else {                                                      // SubjectPublicKeyInfo
+      const bit = derRead(buf, first.end);
+      if (bit.tag !== 0x03) return null;
+      const inner = derRead(buf, bit.start + 1);
+      nInt = derRead(buf, inner.start);
+    }
+    if (nInt.tag !== 0x02) return null;
+    let s = nInt.start;
+    while (s < nInt.end - 1 && buf[s] === 0) s++;
+    return (nInt.end - s) * 8 - (Math.clz32(buf[s]) - 24);
+  } catch (e) { return null; }
+}
+function analyseDkim(rec) {
+  const tags = parseTags(rec, true), f = [];
+  const get = k => (tags.find(t => t.k === k) || {}).v;
+  let summary = '';
+  if (tags.length && tags[0].k === 'v' && tags[0].v !== 'DKIM1') f.push({l: 'bad', t: 'The version should read DKIM1.', fix: 'Correct it to v=DKIM1.'});
+  const k = (get('k') || 'rsa').toLowerCase(), p = get('p');
+  if (p === undefined) f.push({l: 'bad', t: 'The record has no signature key (p=).', fix: 'Re-copy the full record from your email provider.'});
+  else if (p === '') f.push({l: 'warn', t: 'This signature key has been switched off (revoked), so email signed with it will fail.', fix: 'Ask your provider for a new key if you still use this name.'});
+  else {
+    let buf = null;
+    try { buf = b64ToU8(p); } catch (e) { f.push({l: 'bad', t: "The key isn't valid. It was probably cut short or has stray characters when copied.", fix: 'Re-copy the full value from your provider.'}); }
+    if (buf) {
+      if (k === 'ed25519') {
+        summary = 'Ed25519'; f.push({l: buf.length === 32 ? 'ok' : 'bad', t: buf.length === 32 ? 'Modern Ed25519 key. Strong, though not every receiver supports it yet, so keep an RSA key as well.' : 'This Ed25519 key is the wrong length.'});
+      } else if (k === 'rsa') {
+        const bits = rsaBits(buf);
+        if (!bits) f.push({l: 'bad', t: "The signature key couldn't be read. It may be cut short.", fix: 'Re-copy the full value from your provider.'});
+        else {
+          summary = `${bits}-bit`;
+          if (bits < 1024) f.push({l: 'bad', t: `The key is far too weak (${bits}-bit) and will be rejected.`, fix: 'Ask your provider to generate a 2048-bit key.'});
+          else if (bits < 2048) f.push({l: 'warn', t: `The key is older and weaker (${bits}-bit).`, fix: 'Ask your provider to rotate to a 2048-bit key.'});
+          else f.push({l: 'ok', t: `The signature key is strong (${bits}-bit).`});
+        }
+      } else f.push({l: 'warn', t: `Unrecognised key type "${k}".`});
+    }
+  }
+  const t = (get('t') || '').split(':');
+  if (t.includes('y')) f.push({l: 'warn', t: 'The key is marked as "test mode", so receivers may not enforce it.', fix: 'Remove t=y once you have confirmed signing works.'});
+  const h = get('h');
+  if (h && !/sha256/i.test(h)) f.push({l: 'warn', t: 'This key only allows an outdated signing method (SHA-1).', fix: 'Ask your provider for a new key.'});
+  return {tags, findings: f, summary};
+}
+const DKIM_DESC = {v: 'Marks this as a DKIM key.', k: 'The type of key (rsa is standard).', p: 'The public key receivers use to check signatures. Empty means switched off.', t: 'Flags: y means test mode.', h: 'Which signing methods are allowed.', s: 'What the key may be used for.', n: 'Notes.'};
+
+/* ---------- parsed view (shared by decoder and domain check) ---------- */
+function decodeParts(rec) {
+  rec = rec.trim();
+  if (rec.includes('"')) rec = joinTxt(rec);
+  if (isSpf(rec)) {
+    const a = analyseSpf(rec);
+    return {type: 'SPF', raw: rec, findings: a.findings, status: statusOf(a.findings), extra: servicesHtml(a.terms), rows: a.terms.map(t => [t.raw, explainSpf(t)])};
+  }
+  if (isDmarc(rec)) {
+    const a = analyseDmarc(rec);
+    return {type: 'DMARC', raw: rec, findings: a.findings, status: statusOf(a.findings), tags: a.tags,
+      rows: a.tags.map(t => [t.k + '=' + t.v, DMARC_DESC[t.k] || 'Not a standard setting.'])};
+  }
+  if (isDkim(rec)) {
+    const a = analyseDkim(rec);
+    return {type: 'DKIM', raw: rec, findings: a.findings, status: statusOf(a.findings), summary: a.summary,
+      rows: a.tags.map(t => [t.k + '=' + (t.v.length > 40 ? t.v.slice(0, 40) + '…' : t.v), DKIM_DESC[t.k] || 'Not a standard setting.'])};
+  }
+  return null;
+}
+
+/* ---------- DECODER ---------- */
+const TYPE_TITLE = {SPF: 'SPF record (who can send your email)', DMARC: 'DMARC record (what to do with fakes)', DKIM: 'DKIM key (the email signature)'};
+function runDecoder() {
+  const v = $('#decIn').value.trim();
+  const out = $('#decOut');
+  if (!v) { out.innerHTML = ''; return; }
+  const d = decodeParts(v);
+  out.innerHTML = d ? card(TYPE_TITLE[d.type], d.status, (d.extra || '') + findingsHtml(d.findings) + techBox(d.raw, d.rows))
+    : card('We don\'t recognise this', 'fail', '<p>This doesn\'t look like an SPF record (starts <code>v=spf1</code>), a DMARC record (starts <code>v=DMARC1</code>) or a DKIM key (contains <code>p=</code>). Check that you copied the whole value.</p>');
+}
+$('#decIn').addEventListener('input', runDecoder);
+$$('[data-example]').forEach(b => b.addEventListener('click', () => { $('#decIn').value = b.dataset.example; runDecoder(); }));
+
+/* ---------- DOMAIN CHECK ---------- */
+const SELECTORS = ['google', 'selector1', 'selector2', 'default', 'k1', 'k2', 'k3', 's1', 's2', 'mail', 'dkim', 'smtp', 'mandrill', 'zoho', 'sig1', 'protonmail', 'mxvault'];
+/* Common DKIM selector names and the service that usually uses them (sure = unambiguous) */
+const DKIM_SERVICES = {
+  google: ['Google Workspace', true], selector1: ['Microsoft 365', true], selector2: ['Microsoft 365', true],
+  k1: ['Mailchimp', false], k2: ['Mailchimp', false], k3: ['Mailchimp', false],
+  s1: ['SendGrid', false], s2: ['SendGrid', false], mandrill: ['Mailchimp Transactional (Mandrill)', true],
+  zoho: ['Zoho Mail', true], protonmail: ['Proton Mail', true], sig1: ['iCloud Mail', true]
+};
+function dkimService(sel) { const s = DKIM_SERVICES[String(sel).toLowerCase()]; return s ? {name: s[0], sure: s[1]} : null; }
+const PROVIDER_HINTS = [
+  {re: /google\.com|googlemail\.com|aspmx/i, name: 'Google Workspace', tip: 'In the Google Admin console go to Apps > Google Workspace > Gmail > Authenticate email, generate a record, add it to your DNS, then click Start authentication.'},
+  {re: /outlook\.com|protection\.outlook|office365/i, name: 'Microsoft 365', tip: 'In the Microsoft Defender portal go to Email & collaboration > Policies & rules > Threat policies > Email authentication settings > DKIM, and turn it on for your domain.'},
+  {re: /zoho/i, name: 'Zoho Mail', tip: "Open your Zoho Mail admin settings and look for the DKIM section under your domain's email configuration."},
+  {re: /proton\.ch|protonmail/i, name: 'Proton Mail', tip: "In Proton Mail's settings, open your custom domain and follow the DKIM step."},
+  {re: /icloud\.com|me\.com/i, name: 'iCloud Mail', tip: 'iCloud custom domains set up DKIM for you. Check the DNS records Apple asked you to add.'}
+];
+const introHtml = () => `<div class="gloss">
+  <div class="card"><h3>SPF</h3><p class="nick">who can send your email</p><p>Lists which services are allowed to send email from your domain.</p></div>
+  <div class="card"><h3>DKIM</h3><p class="nick">the email signature</p><p>A hidden signature proving an email really came from you and wasn't changed.</p></div>
+  <div class="card"><h3>DMARC</h3><p class="nick">what to do with fakes</p><p>Tells receivers to block or spam-folder email that fails the other two, and sends you reports.</p></div>
+</div>`;
+
+async function checkDomain(domain, custom) {
+  const out = $('#chkOut');
+  out.innerHTML = `<p class="spinner">Checking ${esc(domain)}…</p>`;
+  const sels = [...new Set([custom, ...SELECTORS].filter(Boolean))];
+  const [spfR, dmR, mxR, ...dkR] = await Promise.allSettled([
+    txt(domain), txt('_dmarc.' + domain), mxHosts(domain), ...sels.map(s => txt(`${s}._domainkey.${domain}`))
+  ]);
+  if (spfR.status === 'rejected' && dmR.status === 'rejected') {
+    out.innerHTML = card('We couldn\'t check', 'fail', `<p>${esc(spfR.reason.message)}</p>`); return;
+  }
+  if (spfR.status === 'fulfilled' && spfR.value.status === 3) {
+    out.innerHTML = card("That domain doesn't exist", 'fail', `<p><b>${esc(domain)}</b> wasn't found. Check the spelling. Use just the part after the @ in an email address, like example.com.</p>`); return;
+  }
+  const fixes = [];
+  const addFix = (sev, t, goto) => fixes.push({sev, t, goto});
+  const cards = [];
+
+  // SPF
+  const spfRecs = spfR.status === 'fulfilled' ? spfR.value.records.filter(isSpf) : [];
+  let spfPresent = false, spfOk = false;
+  const SPF_WHAT = 'Lists which services are allowed to send email from your domain.';
+  if (!spfRecs.length) {
+    cards.push(card('SPF', 'missing', "<p>No SPF record found. Without it, receivers can't tell whether email claiming to be from you is real.</p>", SPF_WHAT, 'who can send your email'));
+    addFix('bad', 'Create your SPF record (the list of who can send as you).', 'spf');
+  } else {
+    spfPresent = true;
+    const a = analyseSpf(spfRecs[0]);
+    const f = a.findings.slice();
+    if (spfRecs.length > 1) {
+      f.unshift({l: 'bad', t: `You have ${spfRecs.length} SPF records. A domain must have exactly one, so receivers treat this as an error.`, fix: 'Merge them into a single record and delete the extras.'});
+    }
+    const st = {count: 0, fetches: 0, issues: []};
+    for (const t of a.terms) {
+      const inc = t.type === 'mech' && t.name === 'include', red = t.type === 'modifier' && t.name === 'redirect';
+      if (inc || red) { st.count++; if (t.value) await countSpf(t.value.toLowerCase(), st, [domain]); }
+      else if (t.type === 'mech' && ['a', 'mx', 'ptr', 'exists'].includes(t.name)) st.count++;
+    }
+    if (st.count > 10 && !f.some(x => /limit is 10/.test(x.t))) f.push({l: 'bad', t: `Your record needs ${st.count} lookups once all your services are counted, and the limit is 10. Above that, SPF breaks completely.`, fix: 'Remove services you no longer use.'});
+    st.issues.forEach(i => f.push(i));
+    spfOk = !f.some(x => x.l === 'bad');
+    const status = statusOf(f);
+    if (status === 'pass') f.push({l: 'ok', t: `The list is within technical limits (${st.count} of 10 lookups used).`});
+    f.filter(x => x.fix && (x.l === 'bad' || x.l === 'warn')).forEach(x => addFix(x.l, x.fix.replace(/\.$/, '') + '.', 'spf'));
+    cards.push(card('SPF', status, servicesHtml(a.terms) + findingsHtml(f) + techBox(spfRecs[0], a.terms.map(t => [t.raw, explainSpf(t)])), SPF_WHAT, 'who can send your email'));
+  }
+
+  // DMARC
+  const dmRecs = dmR.status === 'fulfilled' ? dmR.value.records.filter(isDmarc) : [];
+  let dmPresent = false, dmEnforced = false;
+  const DM_WHAT = 'Tells receivers what to do with email that pretends to be you, and sends you reports.';
+  if (!dmRecs.length) {
+    cards.push(card('DMARC', 'missing', "<p>No instructions found. Receivers have no guidance on what to do with fake email pretending to be you. Google and Yahoo also now expect this from anyone who sends a lot of email.</p>", DM_WHAT, 'what to do with fakes'));
+    addFix('bad', 'Create your DMARC record (start with "Just watch" so nothing can break).', 'dmarc');
+  } else {
+    dmPresent = true;
+    const d = decodeParts(dmRecs[0]);
+    const f = d.findings.filter(x => x.l !== 'info');
+    if (dmRecs.length > 1) f.unshift({l: 'bad', t: `You have ${dmRecs.length} DMARC records. Receivers ignore DMARC entirely when there is more than one.`, fix: 'Keep one and delete the others.'});
+    const p = (d.tags.find(t => t.k === 'p') || {}).v;
+    dmEnforced = ['quarantine', 'reject'].includes(p) && dmRecs.length === 1;
+    f.filter(x => x.fix && (x.l === 'bad' || x.l === 'warn')).forEach(x => addFix(x.l, x.fix.replace(/\.$/, '') + '.', 'dmarc'));
+    cards.push(card('DMARC', dmRecs.length > 1 ? 'fail' : d.status, findingsHtml(f) + techBox(dmRecs[0], d.rows), DM_WHAT, 'what to do with fakes'));
+  }
+
+  // DKIM
+  const found = [];
+  dkR.forEach((r, i) => {
+    if (r.status !== 'fulfilled') return;
+    const rec = r.value.records.find(isDkim);
+    if (rec) found.push({sel: sels[i], rec});
+  });
+  const DK_WHAT = 'A hidden signature proving your email really came from you and was not changed.';
+  const provText = (spfRecs[0] || '') + ' ' + (mxR.status === 'fulfilled' ? mxR.value.join(' ') : '');
+  const prov = PROVIDER_HINTS.find(p => p.re.test(provText));
+  let dkimFound = false;
+  if (!found.length) {
+    cards.push(card('DKIM', 'none',
+      `<p>We couldn't find a signature key automatically. <b>That doesn't mean you don't have one.</b> Each provider uses its own private name for the key, and DNS doesn't let us list them, so we can only try the common ones.</p>` +
+      (prov ? `<div class="warnbox" style="background:var(--info-bg);color:var(--info)"><b>Looks like you use ${esc(prov.name)}.</b> ${esc(prov.tip)}</div>` : '') +
+      `<details open><summary>Quick way to check without any technical knowledge</summary><ol class="howto">
+        <li>Send an email from your domain to a Gmail address.</li>
+        <li>Open it in Gmail, click the three dots, then <b>Show original</b>.</li>
+        <li>At the top, look for <b>DKIM: PASS</b> with your domain next to it. If you see it, you're signed.</li>
+      </ol></details>
+      <details><summary>I know my DKIM selector</summary>
+        <p class="small">The selector is the <code>s=</code> value in the email's <b>DKIM-Signature</b> header (in Show original).</p>
+        <form class="inline" id="dkAgain"><input type="text" id="dkAgainSel" placeholder="e.g. google" spellcheck="false" autocapitalize="none" aria-label="DKIM selector"><button class="btn" type="submit">Check again</button></form>
+      </details>
+      <p class="small">Don't have DKIM yet? See <a class="link" data-goto="dkim">Set up DKIM</a>.</p>`,
+      DK_WHAT, 'the email signature'));
+  } else {
+    dkimFound = true;
+    const parts = [], stats = [];
+    if (found.length > 1) parts.push(`<p class="small" style="margin-top:10px">We found ${found.length} signature keys. That's normal: each service that sends email as you (Google, Mailchimp and so on) has its own key, and each is checked separately. A weak key only affects email sent through that one service.</p>`);
+    found.forEach(x => {
+      const d = decodeParts(x.rec);
+      const svc = dkimService(x.sel);
+      const who = svc ? (svc.sure ? svc.name : `Probably ${svc.name}`) : 'A key we can\'t match to a service';
+      stats.push(d.status);
+      d.findings.filter(y => y.fix && (y.l === 'bad' || y.l === 'warn')).forEach(y => {
+        const fix = svc ? y.fix.replace(/your provider/g, svc.name) : y.fix;
+        addFix(y.l, fix.replace(/\.$/, '') + '.', 'dkim');
+      });
+      const fl = d.findings.map(y => svc && y.fix ? Object.assign({}, y, {fix: y.fix.replace(/your provider/g, svc.name)}) : y);
+      parts.push(`<p style="margin:14px 0 0"><b>${esc(who)}</b> <span class="small">(key name: ${esc(x.sel)}${d.summary ? ', ' + esc(d.summary) : ''})</span></p>` + findingsHtml(fl) + techBox(x.rec, d.rows));
+    });
+    const s = stats.includes('fail') ? 'fail' : stats.includes('warn') ? 'warn' : 'pass';
+    cards.push(card('DKIM', s, parts.join(''), DK_WHAT, 'the email signature'));
+  }
+
+  // Overall banner
+  let level, head, sub;
+  if (spfOk && dmEnforced) {
+    level = 'ok'; head = `${domain} is well protected`;
+    sub = dkimFound ? 'Email services can check your email is real, and are told to block fakes.'
+      : "Email services can check who is allowed to send your email, and are told to block fakes. We couldn't confirm DKIM signing automatically, see below.";
+  } else if (!spfPresent && !dmPresent) {
+    level = 'bad'; head = `${domain} is easy to impersonate`;
+    sub = 'Nothing currently stops someone sending email that looks like it came from you. The fixes are usually quick.';
+  } else {
+    level = 'warn'; head = `${domain} is only partly protected`;
+    sub = 'Some protection is in place, but scammers may still get fake email through. Here is what to fix.';
+  }
+  let html = `<div class="banner ${level}"><h2>${esc(head)}</h2><p>${esc(sub)}</p></div>`;
+  fixes.sort((a, b) => (a.sev === 'bad' ? 0 : 1) - (b.sev === 'bad' ? 0 : 1));
+  if (fixes.length) {
+    const seen = new Set();
+    html += `<section class="card"><h3>What to do next</h3><ol class="todo">` + fixes.filter(f => !seen.has(f.t) && seen.add(f.t)).map(f =>
+      `<li>${esc(f.t)} <a class="link" data-goto="${f.goto}">Show me how</a></li>`).join('') + `</ol></section>`;
+  }
+  out.innerHTML = html + cards.join('');
+  const again = $('#dkAgain');
+  if (again) again.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('#dkAgainSel').value.trim();
+    if (!v) return;
+    $('#chkSel').value = v;
+    $('#checkForm').requestSubmit();
+  });
+}
+$('#checkForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const d = cleanDomain($('#chkDomain').value);
+  if (!d) { $('#chkOut').innerHTML = card('That doesn\'t look like a domain', 'fail', '<p>Enter the part of your email address after the @, like <b>example.com</b>.</p>'); return; }
+  const sel = $('#chkSel').value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  $('#chkBtn').disabled = true;
+  try { history.replaceState(null, '', `?domain=${encodeURIComponent(d)}${sel ? '&selector=' + encodeURIComponent(sel) : ''}#check`); } catch (e2) {}
+  try { await checkDomain(d, sel); }
+  catch (err) { $('#chkOut').innerHTML = card('We couldn\'t check', 'fail', `<p>${esc(err.message)}</p>`); }
+  $('#chkBtn').disabled = false;
+});
+$('#chkOut').innerHTML = introHtml();
+
+/* ---------- DNS record block ---------- */
+function dnsBlock(idBase, type, name, value) {
+  return `<div class="dns">
+    <div class="dnsrow"><span class="k">Type</span><code>${esc(type)}</code></div>
+    <div class="dnsrow"><span class="k">Name</span><code id="${idBase}N">${esc(name)}</code><button class="btn ghost" data-copy="${idBase}N">Copy</button></div>
+    <div class="dnsrow"><span class="k">Value</span><pre class="out" id="${idBase}V">${esc(value)}</pre><button class="btn ghost" data-copy="${idBase}V">Copy</button></div></div>`;
+}
+
+/* ---------- SPF GENERATOR ---------- */
+const PROVIDERS = [
+  ['Google Workspace (Gmail for business)', '_spf.google.com'], ['Microsoft 365 (Outlook for business)', 'spf.protection.outlook.com'],
+  ['Mailchimp (newsletters)', 'servers.mcsv.net'], ['SendGrid', 'sendgrid.net'], ['Amazon SES', 'amazonses.com'],
+  ['Mailgun', 'mailgun.org'], ['Postmark', 'spf.mtasv.net'], ['Zoho Mail', 'zoho.com']
+];
+$('#spfProvs').innerHTML = PROVIDERS.map(p =>
+  `<label class="check"><input type="checkbox" class="spf-prov" value="${esc(p[1])}"> ${esc(p[0])}</label>`).join('');
+function buildSpf() {
+  if ($('#spfNone').checked) return 'v=spf1 -all';
+  const parts = ['v=spf1'];
+  if ($('#spfMx').checked) parts.push('mx');
+  if ($('#spfA').checked) parts.push('a');
+  $$('.spf-prov:checked').forEach(c => parts.push('include:' + c.value));
+  $('#spfInc').value.split(/[\s,]+/).filter(Boolean).forEach(d => parts.push('include:' + d.replace(/^include:/i, '')));
+  $('#spfIps').value.split(/[\s,]+/).filter(Boolean).forEach(ip => {
+    ip = ip.replace(/^ip[46]:/i, '');
+    parts.push((ip.includes(':') ? 'ip6:' : 'ip4:') + ip);
+  });
+  parts.push(($('input[name=spfAll]:checked') || {}).value || '~all');
+  return parts.join(' ');
+}
+function updateSpf() {
+  const rec = buildSpf();
+  $('#spfOut').textContent = rec;
+  const notes = [];
+  if (rec === 'v=spf1 ~all' || rec === 'v=spf1 -all' && !$('#spfNone').checked)
+    notes.push({l: 'warn', t: "You haven't ticked any sending services yet, so this record would mark all your real email as suspicious.", fix: 'Tick the services you use in step 1.'});
+  analyseSpf(rec).findings.filter(x => x.l === 'bad' || (x.l === 'warn' && /lookup/.test(x.t))).forEach(x => notes.push(x));
+  $('#spfNotes').innerHTML = findingsHtml(notes);
+}
+$('#tab-spf').addEventListener('input', updateSpf);
+$('#tab-spf').addEventListener('change', updateSpf);
+$('#spfDetect').addEventListener('click', async () => {
+  const msg = $('#spfDetectMsg');
+  const d = cleanDomain($('#spfDomain').value);
+  if (!d) { msg.innerHTML = findingsHtml([{l: 'warn', t: 'Enter your domain first, like example.com.'}]); return; }
+  msg.innerHTML = '<p class="spinner">Looking…</p>';
+  try {
+    const r = await txt(d);
+    const rec = r.records.find(isSpf);
+    if (!rec) { msg.innerHTML = findingsHtml([{l: 'info', t: `${d} has no SPF record yet, so tick the services you use and add the result.`}]); return; }
+    const a = analyseSpf(rec);
+    const known = new Set(PROVIDERS.map(p => p[1]));
+    const other = [], ips = [];
+    $$('.spf-prov').forEach(c => c.checked = false);
+    $('#spfMx').checked = $('#spfA').checked = $('#spfNone').checked = false;
+    a.terms.forEach(t => {
+      if (t.type !== 'mech') return;
+      if (t.name === 'include') {
+        const box = $$('.spf-prov').find(c => c.value.toLowerCase() === t.value.toLowerCase());
+        if (box) box.checked = true; else other.push(t.value);
+      } else if (t.name === 'mx') $('#spfMx').checked = true;
+      else if (t.name === 'a') $('#spfA').checked = true;
+      else if (t.name === 'ip4' || t.name === 'ip6') ips.push(t.value);
+    });
+    $('#spfInc').value = other.join(' ');
+    $('#spfIps').value = ips.join(' ');
+    const all = a.terms.find(t => t.type === 'mech' && t.name === 'all');
+    const radio = $(`input[name=spfAll][value="${all && all.q === '-' ? '-all' : '~all'}"]`);
+    if (radio) radio.checked = true;
+    const names = spfServices(a.terms).filter(i => !i.unknown).map(i => i.label);
+    if (other.length || ips.length || $('#spfMx').checked || $('#spfA').checked) { const det = $('#spfInc').closest('details'); if (det) det.open = true; }
+    const notes = [{l: 'ok', t: (names.length ? `Found your current record: ${names.join(', ')}. ` : 'Found your current record. ') +
+      'Tick boxes are set to match. When you add the new record, edit your existing one rather than adding a second.'}];
+    if (other.length) notes.push({l: 'info', t: `Also kept: ${other.map(o => serviceName(o) || o).join(', ')}. We have no tick box for ${other.length > 1 ? 'these' : 'this'}, so ${other.length > 1 ? 'they are' : 'it is'} listed under More options.`});
+    msg.innerHTML = findingsHtml(notes) +
+      `<details><summary>Show current record</summary><pre class="out" style="margin-top:8px">${esc(rec)}</pre></details>`;
+    updateSpf();
+  } catch (e) { msg.innerHTML = findingsHtml([{l: 'bad', t: e.message}]); }
+});
+
+/* ---------- DMARC GENERATOR ---------- */
+function buildDmarc() {
+  const p = ($('input[name=dmP]:checked') || {}).value || 'none';
+  const parts = ['v=DMARC1', 'p=' + p];
+  if ($('#dmSp').value) parts.push('sp=' + $('#dmSp').value);
+  const pct = parseInt($('#dmPct').value, 10);
+  if (pct && pct !== 100) parts.push('pct=' + Math.min(100, Math.max(1, pct)));
+  const mail = v => v.split(/[\s,]+/).filter(Boolean).map(a => 'mailto:' + a.replace(/^mailto:/i, '')).join(',');
+  if ($('#dmRua').value.trim()) parts.push('rua=' + mail($('#dmRua').value));
+  if ($('#dmRuf').value.trim()) parts.push('ruf=' + mail($('#dmRuf').value));
+  if ($('#dmDkim').value === 's') parts.push('adkim=s');
+  if ($('#dmSpf').value === 's') parts.push('aspf=s');
+  return parts.join('; ');
+}
+function updateDmarc() {
+  const rec = buildDmarc();
+  const d = cleanDomain($('#dmDomain').value);
+  $('#dmName').textContent = '_dmarc';
+  $('#dmOut').textContent = rec;
+  const notes = [];
+  if (!$('#dmRua').value.trim()) notes.push({l: 'warn', t: "You haven't entered an email address for reports. DMARC works without one, but you won't be able to see who is sending as your domain.", fix: 'Add your address in step 1.'});
+  else if (!/^[^@\s,]+@[^@\s,]+\.[^@\s,]+$/.test($('#dmRua').value.trim().replace(/^mailto:/i, ''))) notes.push({l: 'bad', t: "That doesn't look like a valid email address.", fix: 'Check the spelling of the report address.'});
+  if (d) notes.push({l: 'info', t: `Full name of this record: _dmarc.${d} (most DNS hosts add the domain for you, so just type _dmarc).`});
+  $('#dmNotes').innerHTML = findingsHtml(notes);
+}
+$('#tab-dmarc').addEventListener('input', updateDmarc);
+$('#tab-dmarc').addEventListener('change', updateDmarc);
+
+/* ---------- DKIM GENERATOR (own mail server) ---------- */
+const chunk = (s, n) => s.match(new RegExp('.{1,' + n + '}', 'g')) || [];
+const u8ToB64 = u8 => { let s = ''; u8.forEach(b => s += String.fromCharCode(b)); return btoa(s); };
+const pem = (b64, label) => `-----BEGIN ${label}-----\n${chunk(b64, 64).join('\n')}\n-----END ${label}-----\n`;
+let lastPem = '', lastSel = '';
+$('#dkBtn').addEventListener('click', async () => {
+  const out = $('#dkOut');
+  if (!(window.crypto && crypto.subtle)) { out.innerHTML = '<div class="warnbox">Your browser can\'t create keys on this page. Open it over HTTPS and try again.</div>'; return; }
+  const sel = $('#dkSel').value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'mail';
+  const bits = parseInt($('#dkBits').value, 10);
+  $('#dkBtn').disabled = true;
+  out.innerHTML = '<p class="spinner">Creating key pair…</p>';
+  try {
+    const kp = await crypto.subtle.generateKey({name: 'RSASSA-PKCS1-v1_5', modulusLength: bits, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'}, true, ['sign', 'verify']);
+    const pub = u8ToB64(new Uint8Array(await crypto.subtle.exportKey('spki', kp.publicKey)));
+    const priv = u8ToB64(new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey)));
+    const rec = `v=DKIM1; k=rsa; ${$('#dkTest').checked ? 't=y; ' : ''}p=${pub}`;
+    lastPem = pem(priv, 'PRIVATE KEY'); lastSel = sel;
+    const a = analyseDkim(rec);
+    out.innerHTML =
+      `<div class="step"><span class="num">1</span> Add this public record to your domain's DNS</div>` +
+      dnsBlock('dkR', 'TXT', `${sel}._domainkey`, rec) +
+      (rec.length > 255 ? `<p class="small">This value is long (${rec.length} characters). Most DNS hosts split it automatically. If yours complains, ask its support about long TXT records.</p>` : '') +
+      findingsHtml(a.findings.filter(x => x.l !== 'ok')) +
+      `<div class="step"><span class="num">2</span> Give the private key to your mail server</div>` +
+      `<div class="dnsrow" style="border:0"><pre class="out" id="dkPriv">${esc(lastPem)}</pre></div>` +
+      `<p><button class="btn ghost" data-copy="dkPriv">Copy private key</button> <button class="btn ghost" id="dkDl">Download</button></p>` +
+      `<div class="warnbox"><b>Keep the private key secret.</b> It was created on your device and is never uploaded. Never put it in email, chat or public code. Anyone holding it can sign email as you.</div>` +
+      `<div class="step"><span class="num">3</span> Tell your mail server to sign with the selector <code>${esc(sel)}</code></div><p class="small">The exact steps depend on your mail server software. Afterwards, use Check my domain with this selector to confirm.</p>`;
+    $('#dkDl').addEventListener('click', () => {
+      const url = URL.createObjectURL(new Blob([lastPem], {type: 'application/x-pem-file'}));
+      const a2 = document.createElement('a'); a2.href = url; a2.download = lastSel + '.private.pem'; a2.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+  } catch (e) { out.innerHTML = `<div class="warnbox">Key creation failed: ${esc(e.message)}</div>`; }
+  $('#dkBtn').disabled = false;
+});
+
+/* ---------- copy buttons ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-copy]');
+  if (!b) return;
+  const el = document.getElementById(b.dataset.copy);
+  try { await navigator.clipboard.writeText(el.textContent); const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => b.textContent = o, 1200); }
+  catch (err) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+});
+
+/* ---------- LEARN TAB ---------- */
+const LEARN = [
+  {id: 'words', title: 'Common words', code: false, chip: 'Common words',
+   intro: 'What the words you will see in this tool mean.', terms: [
+    {t: 'Domain', s: 'The part of an email address after the @',
+     d: "In `jane@example.com` the domain is `example.com`. It's your organisation's name on the internet. Scammers send email that looks like it comes from your domain."},
+    {t: 'Spoofing', s: 'Faking the sender of an email',
+     d: "Anyone can type any address into the 'From' line of an email. Nothing checks it by default. SPF, DKIM and DMARC are the checks."},
+    {t: 'Phishing', s: 'A scam email that tries to get you to click a link or hand over details',
+     d: "Often sent from a spoofed address, for example an email that looks like it's from your boss or your bank."},
+    {t: 'DNS', s: "Where your domain's settings are stored",
+     d: "DNS holds the settings for your domain, such as where your website is and where your email goes. SPF, DKIM and DMARC are stored there too. You change them in your domain's DNS settings."},
+    {t: 'DNS record', s: 'One setting in DNS',
+     d: 'Each record has a Type, a Name and a Value. SPF and DMARC are one record each. DKIM is one record for each service that sends email as you.'},
+    {t: 'Type, Name, Value', s: 'The three boxes you fill in to add a record',
+     d: "**Type** is the kind of record (usually `TXT` for these). **Name** is its label, such as `@` or `_dmarc`. **Value** is the content. This tool makes the Value for you to copy."},
+    {t: 'TXT record', s: 'A record that holds text',
+     d: 'SPF and DMARC use TXT records, and so does DKIM most of the time.'},
+    {t: 'CNAME record', s: 'A record that points one name at another',
+     d: 'Some providers, including Microsoft 365, give you CNAME records for DKIM. That lets them update the key for you.'},
+    {t: 'MX record', s: 'Says which servers receive your email',
+     d: 'MX is short for mail exchange. It controls where incoming email goes. SPF is about outgoing email.'},
+    {t: 'A record', s: 'Says which server your website is on',
+     d: 'SPF can allow this server to send email too (the `a` setting). That matters if your website sends email, such as contact form messages or order confirmations.'},
+    {t: 'Subdomain', s: 'A name added in front of your domain',
+     d: '`mail.example.com` and `shop.example.com` are subdomains of `example.com`. Scammers can spoof these too, and DMARC can cover them.'},
+    {t: 'Registrar / DNS host', s: 'The company you manage your domain with',
+     d: 'Often where you bought the domain, such as GoDaddy, Namecheap, 123 Reg or Squarespace. Some people use another company for DNS, such as Cloudflare. This is where you add the records.'},
+    {t: 'Mail provider', s: 'Gmail, Outlook, Yahoo and similar',
+     d: 'The services that receive email. They read your SPF, DKIM and DMARC records and decide what to do with each email.'},
+    {t: 'Propagation and TTL', s: 'Why a change can take time to show',
+     d: "DNS changes are copied around the internet and saved for a while. A new record usually works within an hour but can take up to 48 hours. If a check doesn't show your change yet, wait and try again."}
+  ]},
+  {id: 'spf', title: 'SPF settings', code: true, chip: 'SPF',
+   intro: 'SPF is a single line that lists who can send email as your domain. These are the parts you may see in it.', terms: [
+    {t: 'v=spf1', s: 'Says this is an SPF record',
+     d: 'Every SPF record starts with this.',
+     ex: '`v=spf1 include:_spf.google.com ~all`'},
+    {t: 'include:', s: 'Also allow the sender list of another service',
+     d: '`include:_spf.google.com` allows everything Google says can send. Add one for each service you use, such as Google Workspace, Microsoft 365 or Mailchimp. Each one counts towards the limit of 10 lookups.',
+     ex: '`include:servers.mcsv.net` allows Mailchimp.'},
+    {t: 'mx', s: 'Also allow the servers that receive your email',
+     d: "Only needed if those servers also send your email. If you aren't sure, leave it out."},
+    {t: 'a', s: "Also allow your website's server",
+     d: "Only needed if your website sends email, such as contact forms or order confirmations. If you aren't sure, leave it out and add it if real emails go missing."},
+    {t: 'ip4: and ip6:', s: 'Allow one specific server address',
+     d: 'An address looks like `203.0.113.10` (ip4) or a longer one with colons (ip6). A `/24` on the end means a whole range of addresses. Mostly used by organisations that run their own mail server.',
+     ex: '`ip4:203.0.113.10`'},
+    {t: 'all', s: 'Everything not listed',
+     d: "Always the last item. It says what to do with email from senders that aren't on the list. The symbol in front sets how strict that is."},
+    {t: '~all', s: 'Treat email from anyone else as suspicious', tag: ['good', 'Good starting point'],
+     d: 'This is called soft fail. Real email you forgot to list will still arrive but may go to spam. A safe choice while you get set up.'},
+    {t: '-all', s: 'Reject email from anyone else', tag: ['good', 'Strictest'],
+     d: "This is called hard fail. Email from senders not on your list can be refused. Use it once you're sure the list is complete, otherwise real email could bounce."},
+    {t: '?all', s: 'No opinion on anyone else', tag: ['avoid', 'Avoid'],
+     d: "This is called neutral. Receivers don't judge unlisted senders, so it does nothing to stop fakes."},
+    {t: '+all', s: 'Allow everyone', tag: ['avoid', 'Never use'],
+     d: "This lets any server on the internet send as your domain, which defeats SPF. If it's in your record, change it."},
+    {t: 'redirect=', s: "Use another domain's list instead", tag: ['adv', 'Advanced'],
+     d: "Rare. Used when one domain copies another domain's SPF record."},
+    {t: 'ptr', s: 'An old, slow way to match servers', tag: ['avoid', 'Avoid'],
+     d: 'The standard says not to use it. Replace it with the actual services or addresses you send from.'},
+    {t: 'exists:', s: 'A custom check using a DNS name', tag: ['adv', 'Advanced'],
+     d: "Used by a few large senders. Most people don't need it."},
+    {t: 'The 10 lookup limit', s: 'The most services an SPF record can use', plain: true,
+     d: 'To check SPF, the receiving server has to look things up. `include`, `a`, `mx`, `ptr`, `exists` and `redirect` each count, including ones inside the lists you include. The limit is 10. Go over it and SPF stops working. Remove services you no longer use.'},
+    {t: 'One record only', s: 'A domain can only have one SPF record', plain: true,
+     d: 'With two SPF records, SPF fails. If you already have one, edit it instead of adding another.'}
+  ]},
+  {id: 'dmarc', title: 'DMARC settings', code: true, chip: 'DMARC',
+   intro: 'DMARC says what receivers should do with email that fails the checks, and sends you reports.', terms: [
+    {t: '_dmarc', s: 'The name this record goes under',
+     d: 'A DMARC record always goes at the name `_dmarc` (so `_dmarc.example.com`). Most DNS hosts add your domain for you, so you usually just type `_dmarc`.'},
+    {t: 'v=DMARC1', s: 'Says this is a DMARC record',
+     d: 'Must come first and be written exactly like this.'},
+    {t: 'p=none', s: 'Watch only', tag: ['good', 'Start here'],
+     d: 'Failing email is still delivered. You get reports showing who is sending email as you. Nothing can break. Stay on this for a few weeks.'},
+    {t: 'p=quarantine', s: 'Send failing email to spam',
+     d: 'Move to this when your reports only show services you recognise.'},
+    {t: 'p=reject', s: 'Refuse failing email', tag: ['good', 'Strongest'],
+     d: 'Failing email is blocked. This is the aim. Only switch to it when your reports are clean, or real email could be blocked.'},
+    {t: 'sp=', s: 'The same choice for subdomains',
+     d: 'Takes the same values as `p`, but applies to subdomains like `mail.example.com`. If you leave it out, subdomains follow `p`. Setting `sp=none` while `p=reject` leaves subdomains open to spoofing.'},
+    {t: 'pct=', s: 'The share of failing email the rule applies to',
+     d: '`pct=10` applies the rule to 10% of failing email. It lets you ease in gradually. The default is 100, meaning all of it.'},
+    {t: 'rua=', s: 'Where daily reports are sent',
+     d: 'An email address, written like `rua=mailto:dmarc@example.com`. Large providers send a daily summary of who sent email as your domain and whether it passed. The reports are technical files, so a free DMARC report reader is useful for turning them into something readable.'},
+    {t: 'ruf=', s: 'Where reports on single failed emails are sent', tag: ['adv', 'Advanced'],
+     d: 'Few providers send these, and they can include private details. Most people leave this out.'},
+    {t: 'adkim= and aspf=', s: 'How closely the checks must match your domain',
+     d: '`r` (relaxed) is the default and lets `mail.example.com` match `example.com`. `s` (strict) needs an exact match. Relaxed is right for almost everyone.'},
+    {t: 'fo=', s: 'When to send failure reports', tag: ['adv', 'Advanced'],
+     d: 'Only matters if you use `ruf`. Safe to leave out.'},
+    {t: 'Alignment', s: 'The passing check must be for your domain', plain: true,
+     d: "A scammer could set up SPF and DKIM on their own domain, pass both, and still put your address in the From line. DMARC stops this by requiring the check to pass for the same domain that's in the From address."}
+  ]},
+  {id: 'dkim', title: 'DKIM settings', code: true, chip: 'DKIM',
+   intro: 'DKIM is a digital signature added to your email. Your email provider usually creates it, and you copy its record into your domain.', terms: [
+    {t: 'Selector', s: 'The name of a DKIM key', plain: true,
+     d: 'A domain can have several DKIM keys, one for each service that sends email as you. The selector tells them apart. In `google._domainkey.example.com` the selector is `google`.',
+     ex: 'Common ones: `google` (Google Workspace), `selector1` and `selector2` (Microsoft 365), `k1` (usually Mailchimp).'},
+    {t: '._domainkey', s: 'The fixed part of a DKIM record name',
+     d: 'DKIM records are always at `selector._domainkey.yourdomain.com`. Only the selector changes.'},
+    {t: 'Public and private key', s: 'Two matching keys: one secret, one published', plain: true,
+     d: 'Your email provider keeps the **private key** and uses it to sign each email. The matching **public key** is published in DNS so receivers can check the signature. Never share a private key.'},
+    {t: 'v=DKIM1', s: 'Says this is a DKIM key',
+     d: 'Should come first, though some providers leave it out.'},
+    {t: 'k=rsa', s: 'The type of key',
+     d: '`rsa` is the standard. A newer type, `ed25519`, exists but not every receiver supports it yet.'},
+    {t: 'p=', s: 'The public key itself',
+     d: 'A long string of letters and numbers. If it gets cut off when copied, DKIM checks fail. `p=` with nothing after it means the key has been turned off.'},
+    {t: '1024-bit vs 2048-bit', s: 'The strength of the key', plain: true,
+     d: "A longer key is harder to crack. 2048-bit is the current standard. 1024-bit still works but is weak, so ask the provider to replace it. If a provider manages the key, you can't change it yourself, only ask them."},
+    {t: 't=y', s: 'Test mode', tag: ['avoid', 'Remove once live'],
+     d: 'Tells receivers the key is being tested, so they go easy on failures. Remove it once signing works.'},
+    {t: 't=s', s: 'Only allow the exact domain', tag: ['adv', 'Advanced'],
+     d: 'Stops subdomains from using this key. Rarely needed.'},
+    {t: 'h=, s=, n=', s: 'Rarely used extras', tag: ['adv', 'Advanced'],
+     d: '`h` limits the signing methods allowed, `s` limits what the key can be used for, and `n` holds notes. You can ignore them.'},
+    {t: 'Key rotation', s: 'Replacing a key now and then', plain: true,
+     d: 'Like changing a password. Good providers do this for you. If you run your own mail server, replace the key about once a year, using a new selector name.'},
+    {t: 'DKIM-Signature header', s: 'Where to find the selector in a real email', plain: true,
+     d: 'In Gmail, open an email, click the three dots and choose Show original. Find `DKIM-Signature`. The `s=` value is the selector and `d=` is the domain that signed it.'}
+  ]},
+  {id: 'results', title: 'What the results mean', code: false, chip: 'Results',
+   intro: 'The coloured labels shown after you check a domain.', terms: [
+    {t: 'Looks good', s: 'Green. This part is fine.', d: 'Nothing to do.'},
+    {t: 'Could be better', s: 'Amber. It works, but could be stronger.',
+     d: 'For example DMARC is on watch only, or a DKIM key is old and weak. Worth fixing, but not urgent.'},
+    {t: 'Needs fixing', s: 'Red. Something is wrong or wide open.',
+     d: 'Go through the What to do next list at the top of the results, starting with the first item.'},
+    {t: 'Not set up', s: 'Red. Nothing was found.',
+     d: "That setting doesn't exist yet. Use the matching Set up tab to create it."},
+    {t: "Couldn't confirm", s: "Blue. We can't tell (DKIM only).",
+     d: "DKIM keys have private names, and DNS doesn't let anyone list them. We only try the common ones. It doesn't mean DKIM is missing. Use the Gmail Show original check, or enter your selector."},
+    {t: 'The summary at the top', s: 'Well protected, partly protected, or easy to impersonate', plain: true,
+     d: 'Well protected: SPF is valid and DMARC sends failing email to spam or blocks it. Partly protected: some settings are in place but there are gaps. Easy to impersonate: nothing stops someone sending email as your domain.'}
+  ]},
+  {id: 'mistakes', title: 'Common mistakes', code: false, chip: 'Common mistakes',
+   intro: 'Easy slips that cause problems.', terms: [
+    {t: 'Adding a second SPF record', s: 'Two records break SPF',
+     d: 'Edit your existing record instead. A domain can only have one.'},
+    {t: 'Ending SPF with +all or ?all', s: 'Both let anyone through',
+     d: 'End with `~all` or `-all`.'},
+    {t: 'Going straight to p=reject', s: 'Real email could be blocked',
+     d: "If a service you use isn't set up properly, its email will be refused. Start with `p=none`, read the reports, then move up one step at a time."},
+    {t: 'Forgetting a service that sends email', s: 'The newsletter tool nobody remembered',
+     d: 'Newsletters, invoicing, helpdesk, booking systems, CRMs and website forms often send as your domain. DMARC reports show them before you start blocking.'},
+    {t: 'Leaving old services in SPF', s: 'Forgotten entries are a risk',
+     d: 'If you stopped using a service, remove its `include`. That also saves lookups.'},
+    {t: 'Ignoring unused domains', s: 'Scammers like domains nobody watches',
+     d: 'A domain that never sends email should have SPF `v=spf1 -all` and DMARC `p=reject`. The Set up SPF page has a tick box for this.'},
+    {t: 'Copy and paste errors', s: 'Extra spaces, curly quotes, cut-off keys',
+     d: 'Use the Copy buttons, then run Check my domain to make sure it saved correctly.'},
+    {t: 'Expecting instant results', s: 'Changes can take time to show',
+     d: 'DNS changes usually show within an hour but can take up to 48. If a check shows the old result, wait and try again.'}
+  ]}
+];
+const fmt = s => esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+function renderLearn() {
+  $('#learnGroups').innerHTML = LEARN.map(g =>
+    `<section class="card lgroup" id="lg-${g.id}"><h2>${esc(g.title)}</h2><p class="what">${fmt(g.intro)}</p>` +
+    g.terms.map(t => {
+      const head = g.code && !t.plain ? `<code>${esc(t.t)}</code>` : `<b>${esc(t.t)}</b>`;
+      const q = [t.t, t.s, t.d, t.ex || ''].join(' ').toLowerCase();
+      return `<details class="term" data-q="${esc(q)}"><summary>${head}<span class="gl">${fmt(t.s)}</span>` +
+        (t.tag ? `<span class="pill ${t.tag[0]}">${esc(t.tag[1])}</span>` : '') + `</summary><p>${fmt(t.d)}</p>` +
+        (t.ex ? `<p class="ex"><b>Example:</b> ${fmt(t.ex)}</p>` : '') + '</details>';
+    }).join('') + '</section>').join('');
+  $('#learnChips').innerHTML = [['big', 'Start here']].concat(LEARN.map(g => [g.id, g.chip]))
+    .map(c => `<button type="button" class="chip" data-jump="${c[0]}">${esc(c[1])}</button>`).join('');
+}
+renderLearn();
+$('#learnChips').addEventListener('click', e => {
+  const b = e.target.closest('[data-jump]');
+  if (!b) return;
+  $('#learnSearch').value = ''; filterLearn();
+  const el = document.getElementById('lg-' + b.dataset.jump);
+  if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+});
+function filterLearn() {
+  const q = $('#learnSearch').value.trim().toLowerCase();
+  let any = false;
+  $$('.lgroup').forEach(g => {
+    let vis = 0;
+    $$('.term', g).forEach(t => {
+      const m = !q || t.dataset.q.includes(q);
+      t.hidden = !m; t.open = !!q && m;
+      if (m) vis++;
+    });
+    g.hidden = vis === 0;
+    if (vis) any = true;
+  });
+  $('#lg-big').hidden = !!q;
+  $('#learnNone').hidden = any;
+}
+$('#learnSearch').addEventListener('input', filterLearn);
+/* a new domain shouldn't reuse a selector typed for the previous one */
+$('#chkDomain').addEventListener('input', () => { $('#chkSel').value = ''; });
+
+/* ---------- init ---------- */
+updateSpf(); updateDmarc();
+const qs = new URLSearchParams(location.search);
+showTab(location.hash.slice(1) || 'check');
+if (qs.get('domain')) {
+  showTab('check');
+  $('#chkDomain').value = qs.get('domain');
+  if (qs.get('selector')) $('#chkSel').value = qs.get('selector');
+  $('#checkForm').requestSubmit();
+}
+})();
+</script>
+</body>
+</html>
