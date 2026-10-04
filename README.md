@@ -26,7 +26,7 @@ Anyone can write any address in the "From" line of an email. So someone can send
 
 ## How it works
 
-It's one `index.html` file with plain JavaScript. There's no build step, no framework and nothing to install.
+Simple HTML file with JavaScript - no build or server host install - either file can be downloaded local or live web version can be used.
 
 **DNS lookups.** It asks Cloudflare's DNS-over-HTTPS service for the records, and asks Google's if Cloudflare doesn't answer. It reads the TXT records at your domain (SPF), at `_dmarc.yourdomain` (DMARC) and at `selector._domainkey.yourdomain` (DKIM). It also reads your MX records to guess which mail provider you use.
 
